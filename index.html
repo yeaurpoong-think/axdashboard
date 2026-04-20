@@ -25,10 +25,22 @@
   .deadline-banner .big { font-size: 32px; font-weight: 700; }
   .deadline-banner .small { font-size: 13px; opacity: 0.9; margin-top: 4px; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-  .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
+  .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
+  .stat:hover { box-shadow: 0 4px 16px rgba(99,102,241,0.15); transform: translateY(-2px); }
   .stat label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
   .stat .val { font-size: 26px; font-weight: 600; }
   .stat .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 480px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-header h3 { font-size: 16px; font-weight: 700; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #94a3b8; line-height: 1; }
+  .modal-close:hover { color: #1e293b; }
+  .member-list { display: flex; flex-direction: column; gap: 8px; }
+  .member-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f8fafc; border-radius: 8px; }
+  .member-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+  .member-team { font-size: 12px; color: #64748b; background: #e2e8f0; padding: 3px 8px; border-radius: 99px; }
   .progress-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
   .progress-bar-bg { background: #e2e8f0; border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 4px; }
@@ -53,6 +65,17 @@
   <p class="subtitle" id="subtitle">데이터 불러오는 중...</p>
 
   <div id="dashboard" style="display:none">
+
+    <!-- 모달 -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modal-title">명단</h3>
+          <button class="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('show')">✕</button>
+        </div>
+        <div class="member-list" id="modal-list"></div>
+      </div>
+    </div>
 
     <!-- D+ 배너 -->
     <div class="banner">
@@ -87,17 +110,17 @@
         <div class="val" id="s-total" style="color:#1e293b">-</div>
         <div class="sub">SRbiotek 전체</div>
       </div>
-      <div class="stat">
+      <div class="stat" onclick="showModal('caliber')">
         <label>⚔️ 엑스칼리버</label>
         <div class="val" id="s-done" style="color:#6366f1">-</div>
         <div class="sub" id="s-done-rate">미션 3개 완료</div>
       </div>
-      <div class="stat">
+      <div class="stat" onclick="showModal('progress')">
         <label>🛡️ 진행 중</label>
         <div class="val" id="s-progress" style="color:#f59e0b">-</div>
         <div class="sub" id="s-progress-rate">퀘스트 수행 중</div>
       </div>
-      <div class="stat">
+      <div class="stat" onclick="showModal('none')">
         <label>📋 미시작</label>
         <div class="val" id="s-none" style="color:#94a3b8">-</div>
         <div class="sub" id="s-none-rate">아직 시작 전</div>
@@ -356,6 +379,33 @@ function makeTimeline(today, rows, total, daysLeft) {
   });
 }
 
+let allRows = [];
+
+function showModal(type) {
+  const configs = {
+    caliber: { title: "⚔️ 엑스칼리버 달성자", filter: r => (r[COL.caliber]||"").trim() === "완료", color: "#6366f1" },
+    progress: { title: "🛡️ 진행 중 명단", filter: r => { const c=(r[COL.caliber]||"").trim(); return c && c !== "완료"; }, color: "#f59e0b" },
+    none: { title: "📋 미시작 명단", filter: r => !(r[COL.caliber]||"").trim(), color: "#94a3b8" },
+  };
+  const { title, filter, color } = configs[type];
+  const members = allRows.filter(filter);
+
+  document.getElementById("modal-title").textContent = `${title} (${members.length}명)`;
+  document.getElementById("modal-list").innerHTML = members.length === 0
+    ? `<p style="text-align:center;color:#94a3b8;padding:20px">해당 인원이 없어요</p>`
+    : members.map(r => `
+        <div class="member-item">
+          <span class="member-name">${r[COL.name] || "-"}</span>
+          <span class="member-team" style="color:${color}">${r[COL.team] || "미정"}</span>
+        </div>`).join("");
+  document.getElementById("modal-overlay").classList.add("show");
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById("modal-overlay"))
+    document.getElementById("modal-overlay").classList.remove("show");
+}
+
 async function loadData() {
   document.getElementById("loading").style.display = "block";
   document.getElementById("dashboard").style.display = "none";
@@ -364,6 +414,7 @@ async function loadData() {
     const text = await res.text();
     const rows = parseCSV(text);
     if (rows.length === 0) throw new Error("데이터 없음");
+    allRows = rows;
 
     const today = new Date(); today.setHours(0,0,0,0);
     const daysSince = Math.max(1, Math.floor((today - LAUNCH) / 86400000));
