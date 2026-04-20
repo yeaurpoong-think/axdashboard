@@ -17,6 +17,13 @@
   .banner-right { text-align: right; }
   .banner-right p:first-child { font-size: 12px; opacity: 0.8; }
   .banner-right p:last-child { font-size: 20px; font-weight: 700; }
+  .deadline-banner { border-radius: 14px; padding: 20px 24px; color: #fff; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+  .deadline-banner.danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  .deadline-banner.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .deadline-banner.safe { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  .deadline-banner p:first-child { font-size: 12px; opacity: 0.85; }
+  .deadline-banner .big { font-size: 32px; font-weight: 700; }
+  .deadline-banner .small { font-size: 13px; opacity: 0.9; margin-top: 4px; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
   .stat label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
@@ -24,18 +31,20 @@
   .stat .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
   .progress-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
-  .progress-bar-bg { background: #e2e8f0; border-radius: 99px; height: 12px; overflow: hidden; }
-  .progress-bar { height: 100%; border-radius: 99px; background: #6366f1; transition: width 0.8s ease; }
+  .progress-bar-bg { background: #e2e8f0; border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 4px; }
+  .progress-bar { height: 100%; border-radius: 99px; transition: width 0.8s ease; }
   .progress-footer { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #94a3b8; }
+  .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .insight { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; text-align: center; }
+  .insight .icon { font-size: 20px; margin-bottom: 8px; }
+  .insight .val { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .insight .label { font-size: 11px; color: #94a3b8; }
   .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .section h2 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-  .section p.desc { font-size: 12px; color: #94a3b8; margin-top: -12px; margin-bottom: 14px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  canvas { max-height: 280px; }
+  canvas { max-height: 300px; }
   .refresh-btn { position: fixed; bottom: 24px; right: 24px; background: #6366f1; color: #fff; border: none; border-radius: 50px; padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
-  .refresh-btn:hover { background: #4f46e5; }
   .loading { text-align: center; padding: 60px; color: #94a3b8; font-size: 16px; }
-  @media(max-width: 600px) { .stats { grid-template-columns: 1fr 1fr; } .grid2 { grid-template-columns: 1fr; } }
+  @media(max-width: 600px) { .stats { grid-template-columns: 1fr 1fr; } .insight-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -44,6 +53,7 @@
   <p class="subtitle" id="subtitle">데이터 불러오는 중...</p>
 
   <div id="dashboard" style="display:none">
+
     <!-- D+ 배너 -->
     <div class="banner">
       <div class="banner-left">
@@ -51,8 +61,22 @@
         <p id="d-day">D+0</p>
       </div>
       <div class="banner-right">
-        <p>80% 달성 예측</p>
+        <p>현재 속도 예측</p>
         <p id="predict80">집계 중</p>
+      </div>
+    </div>
+
+    <!-- 데드라인 배너 -->
+    <div class="deadline-banner" id="deadline-banner">
+      <div>
+        <p>⏰ 5월 7일 데드라인까지</p>
+        <p class="big" id="days-left">-일 남음</p>
+        <p class="small" id="deadline-msg">-</p>
+      </div>
+      <div style="text-align:right">
+        <p>이 속도로 5월 7일 예상 달성율</p>
+        <p class="big" id="may7-rate">-</p>
+        <p class="small" id="need-per-day">-</p>
       </div>
     </div>
 
@@ -80,7 +104,7 @@
       </div>
     </div>
 
-    <!-- 80% 프로그레스 -->
+    <!-- 80% 목표 프로그레스 -->
     <div class="progress-card">
       <div class="progress-header">
         <span>🎯 80% 달성 목표</span>
@@ -95,7 +119,30 @@
       </div>
     </div>
 
-    <!-- 성별 / 나이대 섹션 제거됨 -->
+    <!-- 데드라인 인사이트 -->
+    <div class="insight-grid">
+      <div class="insight">
+        <div class="icon">📅</div>
+        <div class="val" id="i-daysLeft" style="color:#ef4444">-</div>
+        <div class="label">데드라인까지 남은 일수</div>
+      </div>
+      <div class="insight">
+        <div class="icon">👤</div>
+        <div class="val" id="i-needDay" style="color:#f59e0b">-</div>
+        <div class="label">목표 달성을 위한 하루 필요 인원</div>
+      </div>
+      <div class="insight">
+        <div class="icon">🏁</div>
+        <div class="val" id="i-may7" style="color:#6366f1">-</div>
+        <div class="label">현재 속도로 5월 7일 예상 달성율</div>
+      </div>
+    </div>
+
+    <!-- 하루 목표 달성 꺾은선 그래프 -->
+    <div class="section">
+      <h2>📈 5월 7일 목표 달성 시나리오</h2>
+      <canvas id="chart-timeline"></canvas>
+    </div>
 
     <!-- 캠퍼스별 -->
     <div class="section">
@@ -108,8 +155,8 @@
       <h2>👥 팀별 현황</h2>
       <canvas id="chart-team"></canvas>
     </div>
-  </div>
 
+  </div>
   <div class="loading" id="loading">⏳ 구글 시트 데이터 불러오는 중...</div>
 </div>
 
@@ -118,20 +165,17 @@
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSUgphREayIxDwBkFflbSlMGHoed_7buV1SuDUjI9KPEZGwqxhzTky1NuIyiBYOvMeoRMlLWYT5fAAa/pub?output=csv";
 const LAUNCH = new Date("2026-04-13");
-
-// 컬럼 인덱스 (순서 기반 - 인코딩 문제 우회)
-const COL = { name:0, birth:1, gender:2, hire:3, ax:4, caliber:5, campus:6, team:7 };
+const DEADLINE = new Date("2026-05-07");
+const COL = { name:0, birth:1, gender:2, hire:3, caliber:4, campus:5, team:6, completedDate:7 };
 const COLORS6 = ["#6366f1","#22c55e","#f59e0b","#ec4899","#06b6d4","#8b5cf6","#84cc16","#f97316"];
-
 let charts = {};
 
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
   return lines.slice(1).map(line => {
-    const cols = [];
-    let cur = "", inQ = false;
+    const cols = []; let cur = "", inQ = false;
     for (let c of line) {
-      if (c === '"') { inQ = !inQ; }
+      if (c === '"') inQ = !inQ;
       else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ""; }
       else cur += c;
     }
@@ -140,40 +184,23 @@ function parseCSV(text) {
   }).filter(r => r.length > 2 && r[COL.name]);
 }
 
-function getAge(birth) {
-  if (!birth) return "미상";
-  const b = new Date(birth);
-  if (isNaN(b)) return "미상";
-  const age = new Date().getFullYear() - b.getFullYear();
-  if (age < 30) return "20대"; if (age < 40) return "30대";
-  if (age < 50) return "40대"; if (age < 60) return "50대";
-  return "60대+";
-}
-
-function axByKey(rows, keyIdx, axIdx) {
+function axByKey(rows, keyIdx, calIdx) {
   const g = {};
   rows.forEach(r => {
     const k = r[keyIdx] || "미정";
     if (!g[k]) g[k] = { done:0, ing:0, none:0 };
-    const ax = (r[axIdx] || "").trim();
-    if (ax === "완료") g[k].done++;
-    else if (ax) g[k].ing++;
+    const cal = (r[calIdx] || "").trim();
+    if (cal === "완료") g[k].done++;
+    else if (cal) g[k].ing++;
     else g[k].none++;
   });
-  const entries = Object.entries(g).sort((a,b) => (b[1].done+b[1].ing+b[1].none) - (a[1].done+a[1].ing+a[1].none));
+  const entries = Object.entries(g).sort((a,b) => (b[1].done+b[1].ing+b[1].none)-(a[1].done+a[1].ing+a[1].none));
   return {
     labels: entries.map(e => e[0]),
     done: entries.map(e => e[1].done),
     ing: entries.map(e => e[1].ing),
     none: entries.map(e => e[1].none),
   };
-}
-
-function groupCount(rows, keyIdx) {
-  const c = {};
-  rows.forEach(r => { const k = r[keyIdx] || "미정"; c[k] = (c[k]||0)+1; });
-  const entries = Object.entries(c).sort((a,b)=>b[1]-a[1]);
-  return { labels: entries.map(e=>e[0]), values: entries.map(e=>e[1]) };
 }
 
 function makeBarH(id, data) {
@@ -190,8 +217,7 @@ function makeBarH(id, data) {
       ]
     },
     options: {
-      indexAxis: "y",
-      responsive: true,
+      indexAxis: "y", responsive: true,
       plugins: { legend: { position:"bottom", labels:{ font:{size:12} } } },
       scales: {
         x: { stacked:true, grid:{color:"#f1f5f9"} },
@@ -201,42 +227,131 @@ function makeBarH(id, data) {
   });
 }
 
-function makeBarV(id, data) {
-  if (charts[id]) charts[id].destroy();
-  const ctx = document.getElementById(id).getContext("2d");
-  charts[id] = new Chart(ctx, {
-    type: "bar",
+function makeTimeline(today, rows, total, daysLeft) {
+  if (charts["chart-timeline"]) charts["chart-timeline"].destroy();
+
+  const target80 = Math.ceil(total * 0.8);
+
+  // 실제 날짜별 누적 완료 인원 계산
+  const dateCounts = {};
+  rows.forEach(r => {
+    const d = (r[COL.completedDate] || "").trim();
+    if (!d) return;
+    // "4월 13일" 또는 "2026-04-13" 형식 모두 처리
+    let dateKey = null;
+    if (d.includes("-")) {
+      dateKey = d.substring(0, 10);
+    } else {
+      // "4월 13일" 형식 파싱
+      const m = d.match(/(\d+)월\s*(\d+)/);
+      if (m) dateKey = `2026-${String(m[1]).padStart(2,"0")}-${String(m[2]).padStart(2,"0")}`;
+    }
+    if (dateKey) dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1;
+  });
+
+  // 실제 누적 데이터 (발표일부터 오늘까지)
+  const actualLabels = [];
+  const actualData = [];
+  let cumulative = 0;
+  const sortedDates = Object.keys(dateCounts).sort();
+  const allDates = {};
+  sortedDates.forEach(d => allDates[d] = dateCounts[d]);
+
+  // 발표일부터 오늘까지 날짜 생성
+  for (let i = 0; ; i++) {
+    const d = new Date(LAUNCH.getTime() + i * 86400000);
+    if (d > today) break;
+    const key = d.toISOString().substring(0, 10);
+    cumulative += (allDates[key] || 0);
+    actualLabels.push(`${d.getMonth()+1}/${d.getDate()}`);
+    actualData.push(cumulative);
+  }
+
+  // 예측선 (오늘부터 5월 7일까지)
+  const currentDone = actualData[actualData.length - 1] || 0;
+  const daysSince = actualLabels.length;
+  const dailyRate = daysSince > 0 ? currentDone / daysSince : 0;
+  const rem = Math.max(0, target80 - currentDone);
+  const needPerDay = daysLeft > 0 ? rem / daysLeft : 0;
+
+  const forecastLabels = [];
+  const forecastCurrent = [];
+  const forecastTarget = [];
+
+  for (let i = 0; i <= daysLeft; i++) {
+    const d = new Date(today.getTime() + i * 86400000);
+    forecastLabels.push(`${d.getMonth()+1}/${d.getDate()}`);
+    forecastCurrent.push(Math.min(total, Math.round(currentDone + dailyRate * i)));
+    forecastTarget.push(Math.min(total, Math.round(currentDone + needPerDay * i)));
+  }
+
+  // 전체 레이블 합치기
+  const allLabels = [...actualLabels, ...forecastLabels.slice(1)];
+  const actualFull = [...actualData, ...Array(forecastLabels.length - 1).fill(null)];
+  const currentFull = [...Array(actualLabels.length - 1).fill(null), currentDone, ...forecastCurrent.slice(1)];
+  const targetFull = [...Array(actualLabels.length - 1).fill(null), currentDone, ...forecastTarget.slice(1)];
+  const targetLine80 = Array(allLabels.length).fill(target80);
+
+  const ctx = document.getElementById("chart-timeline").getContext("2d");
+  charts["chart-timeline"] = new Chart(ctx, {
+    type: "line",
     data: {
-      labels: data.labels,
+      labels: allLabels,
       datasets: [
-        { label:"완료", data: data.done, backgroundColor:"#22c55e", borderRadius:4 },
-        { label:"진행중", data: data.ing, backgroundColor:"#f59e0b", borderRadius:0 },
-        { label:"미시작", data: data.none, backgroundColor:"#e2e8f0", borderRadius:4 },
+        {
+          label: "실제 누적 완료",
+          data: actualFull,
+          borderColor: "#6366f1",
+          backgroundColor: "rgba(99,102,241,0.1)",
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          spanGaps: false,
+        },
+        {
+          label: "현재 속도 예측",
+          data: currentFull,
+          borderColor: "#f59e0b",
+          borderWidth: 2,
+          borderDash: [5, 3],
+          tension: 0.3,
+          fill: false,
+          pointRadius: 2,
+          spanGaps: false,
+        },
+        {
+          label: `목표 속도 (${needPerDay.toFixed(1)}명/일)`,
+          data: targetFull,
+          borderColor: "#22c55e",
+          borderWidth: 2,
+          borderDash: [5, 3],
+          tension: 0.3,
+          fill: false,
+          pointRadius: 2,
+          spanGaps: false,
+        },
+        {
+          label: `80% 목표 (${target80}명)`,
+          data: targetLine80,
+          borderColor: "#ef4444",
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+        }
       ]
     },
     options: {
       responsive: true,
-      plugins: { legend: { position:"bottom", labels:{font:{size:12}} } },
+      plugins: {
+        legend: { position:"bottom", labels:{ font:{size:12} } },
+        tooltip: { mode:"index", intersect:false }
+      },
       scales: {
-        x: { stacked:true, grid:{display:false}, ticks:{font:{size:12}} },
-        y: { stacked:true, grid:{color:"#f1f5f9"} }
+        x: { grid:{color:"#f1f5f9"}, ticks:{font:{size:11}, maxTicksLimit:12} },
+        y: { grid:{color:"#f1f5f9"}, min:0, max:total, ticks:{font:{size:11}} }
       }
-    }
-  });
-}
-
-function makeDoughnut(id, data) {
-  if (charts[id]) charts[id].destroy();
-  const ctx = document.getElementById(id).getContext("2d");
-  charts[id] = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: data.labels,
-      datasets: [{ data: data.values, backgroundColor: COLORS6.slice(0, data.labels.length) }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position:"bottom", labels:{font:{size:12}} } }
     }
   });
 }
@@ -250,27 +365,45 @@ async function loadData() {
     const rows = parseCSV(text);
     if (rows.length === 0) throw new Error("데이터 없음");
 
-    const today = new Date();
-    const daysSince = Math.floor((today - LAUNCH) / 86400000);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysSince = Math.max(1, Math.floor((today - LAUNCH) / 86400000));
+    const daysLeft = Math.max(0, Math.floor((DEADLINE - today) / 86400000));
+
     const total = rows.length;
-    const done = rows.filter(r => (r[COL.ax]||"").trim() === "완료").length;
-    const ing = rows.filter(r => { const ax=(r[COL.ax]||"").trim(); return ax && ax !== "완료"; }).length;
-    const caliber = rows.filter(r => (r[COL.caliber]||"").trim() !== "").length;
+    const done = rows.filter(r => (r[COL.caliber]||"").trim() === "완료").length;
+    const ing = rows.filter(r => { const c=(r[COL.caliber]||"").trim(); return c && c !== "완료"; }).length;
+    const noneCount = total - done - ing;
     const rate = Math.round(done/total*100);
     const target80 = Math.ceil(total*0.8);
     const rem = Math.max(0, target80 - done);
-    const dailyRate = daysSince > 0 ? done/daysSince : 0;
+
+    // 현재 속도 유지 시 5월 7일 달성 인원
+    const dailyRate = done / daysSince;
+    const may7Done = Math.min(total, Math.round(done + dailyRate * daysLeft));
+    const may7Rate = Math.round(may7Done / total * 100);
+
+    // 목표 달성을 위한 하루 필요 인원
+    const needPerDay = daysLeft > 0 ? rem / daysLeft : rem;
+
+    // 현재 속도로 80% 언제 달성?
     const daysTo80 = dailyRate > 0 && rem > 0 ? Math.ceil(rem/dailyRate) : 0;
     const pred = daysTo80 > 0 ? new Date(today.getTime()+daysTo80*86400000) : null;
     const predStr = rem === 0 ? "🎉 달성 완료!" : pred ? `${pred.getMonth()+1}월 ${pred.getDate()}일 예상` : "집계 중";
 
+    // 데드라인 배너 색상
+    const banner = document.getElementById("deadline-banner");
+    banner.className = "deadline-banner " + (daysLeft <= 7 ? "danger" : daysLeft <= 14 ? "warning" : "safe");
+
     // 헤더
     document.getElementById("subtitle").textContent = `최종 업데이트: ${new Date().toLocaleTimeString("ko-KR")} · 전체 ${total}명`;
-    document.getElementById("d-day").textContent = `D+${Math.max(0, daysSince)}`;
+    document.getElementById("d-day").textContent = `D+${daysSince}`;
     document.getElementById("predict80").textContent = predStr;
 
-    const noneCount = total - done - ing;
-    const noneRate = Math.round(noneCount/total*100);
+    // 데드라인 배너
+    document.getElementById("days-left").textContent = daysLeft > 0 ? `D-${daysLeft}` : "오늘이 마감!";
+    document.getElementById("deadline-msg").textContent = `5월 7일까지 ${rem}명 더 완료 필요`;
+    document.getElementById("may7-rate").textContent = `${may7Rate}%`;
+    document.getElementById("need-per-day").textContent = `하루 ${needPerDay.toFixed(1)}명씩 완료해야 목표 달성`;
 
     // 지표
     document.getElementById("s-total").textContent = total+"명";
@@ -279,7 +412,7 @@ async function loadData() {
     document.getElementById("s-progress").textContent = ing+"명";
     document.getElementById("s-progress-rate").textContent = `전체의 ${Math.round(ing/total*100)}%`;
     document.getElementById("s-none").textContent = noneCount+"명";
-    document.getElementById("s-none-rate").textContent = `전체의 ${noneRate}%`;
+    document.getElementById("s-none-rate").textContent = `전체의 ${Math.round(noneCount/total*100)}%`;
 
     // 프로그레스
     document.getElementById("prog-text").textContent = `${done} / ${target80}명`;
@@ -288,9 +421,16 @@ async function loadData() {
     document.getElementById("prog-left").textContent = `현재 ${rate}%`;
     document.getElementById("prog-right").textContent = rem > 0 ? `${rem}명 더 필요` : "🎉 달성!";
 
-    // 차트 (성별/나이대 제거)
-    makeBarH("chart-campus", axByKey(rows, COL.campus, COL.ax));
-    makeBarH("chart-team", axByKey(rows, COL.team, COL.ax));
+    // 인사이트 카드
+    document.getElementById("i-daysLeft").textContent = daysLeft > 0 ? `${daysLeft}일` : "D-0";
+    document.getElementById("i-needDay").textContent = `${needPerDay.toFixed(1)}명/일`;
+    document.getElementById("i-may7").textContent = `${may7Rate}%`;
+    document.getElementById("i-may7").style.color = may7Rate >= 80 ? "#22c55e" : may7Rate >= 60 ? "#f59e0b" : "#ef4444";
+
+    // 차트
+    makeTimeline(today, rows, total, daysLeft);
+    makeBarH("chart-campus", axByKey(rows, COL.campus, COL.caliber));
+    makeBarH("chart-team", axByKey(rows, COL.team, COL.caliber));
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
